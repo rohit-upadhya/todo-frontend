@@ -1,21 +1,8 @@
-import logo from './logo.svg';
 import './App.css';
 import React, {Component} from "react";
+import Modal from './components/Modal';
+import axios from 'axios';
 
-const todoItems = [
-  {
-    "id": 3,
-    "title": "sigma-LFSR",
-    "description": "Learn about the sigma LFSR",
-    "completed": false
-  },
-  {
-    "id": 4,
-    "title": "Whatsapp automation",
-    "description": "Implement automated version of the it's weednesday bros meme",
-    "completed": true
-  }
-];
 
 
 class App extends Component {
@@ -23,8 +10,59 @@ class App extends Component {
     super(props);
     this.state = {
       viewCompleted: false,
-      todoList: todoItems,
+      todoList: [],
+      modal: false,
+      activeItem: {
+        title: "",
+        description: "",
+        completed: ""
+      },
     };
+  }
+
+  componentDidMount(){
+    this.refreshList();
+  }
+
+  refreshList = () => {
+    axios
+      .get("/api/todos")
+      .then((res) => this.setState({todoList: res.data}))
+      .catch((err) => console.log(err));
+  }
+
+  toggle = () => {
+    this.setState({modal: !this.state.modal });
+  };
+
+  handleSubmit = (item) => {
+    this.toggle();
+
+    if(item.id){
+      axios
+        .put(`/api/todos/${item.id}`, item)
+        .then((res) => this.refreshList());
+      return;
+    }
+
+    axios
+      .post("api/todos/",item)
+      .then((res) => this.refreshList());
+  };
+
+  handleDelete = (item) => {
+    axios
+      .delete(`/api/todos/${item.id}/`)
+      .then((res) => this.refreshList());
+  };
+
+  createItem = () => {
+    const item = {title: "", description: "", completed: ""};
+    this.setState({activeItem: item, modal: !this.state.modal});
+  };
+
+  editItem = (item) => {
+    this.setState({ activeItem: item, modal: !this.state.modal })
   }
 
   displayCompleted = (status) => {
@@ -70,10 +108,16 @@ class App extends Component {
             {item.title}
           </span>
           <span>
-            <button className="btn btn-secondary mr-2">
+            <button 
+              className="btn btn-secondary mr-2"
+              onClick={() => this.editItem(item)}
+            >
               Edit
             </button>
-            <button className="btn btn-danger">
+            <button 
+              className="btn btn-danger"
+              onClick={() => this.handleDelete(item)}
+            >
               Delete
             </button>
           </span>
@@ -82,13 +126,16 @@ class App extends Component {
   };
   render(){
     return(
-      <main className="container p-3 mb-2 bg-dark text-white">
+      <main className="container p-3 mb-2 bg-dark text-red">
         <h1 className="text-white text-uppercase text-center my-4">Todo app</h1>
         <div className="row">
           <div className="col-md-6 col-sm-10 mx-auto p-0">
             <div className="card p-3">
               <div className="mb-4">
-                <button className="bth btn-primary">
+                <button 
+                  className="bth btn-primary"
+                  onClick={() => this.createItem()}
+                >
                   Add Task
                 </button>
               </div>
@@ -99,6 +146,16 @@ class App extends Component {
             </div>
           </div>
         </div>
+
+        {
+          this.state.modal ? (
+            <Modal 
+              activeItem={this.state.activeItem}
+              toggle={this.toggle}
+              onSave={this.handleSubmit}
+            />
+          ) : null
+        }
       </main>
     );
   }
